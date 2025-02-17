@@ -5,6 +5,7 @@ import generateToken from "../utils/generateToken";
 import { v2 as cloudinary } from "cloudinary";
 import { Prisma } from "@prisma/client";
 
+//register api
 export const registerUser = async (req: Request, res: Response) => {
   const { name, email, phone, password, role } = req.body;
   const imageFile = req.file;
@@ -84,6 +85,61 @@ export const registerUser = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error during registration:" + error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+//login api
+export const loginUser = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  //check required fields
+  if (!email || !password) {
+    res.status(400).json({ success: false, message: "Missing details" });
+    return;
+  }
+
+  try {
+    //check if user exists
+    const user = await db.user.findUnique({
+      where: { email },
+    });
+
+    //throw error if user doesn't exists
+    if (!user) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid email or password" });
+      return;
+    }
+
+    //verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid email or password" });
+      return;
+    }
+
+    //generate token
+    const token = generateToken(user.id, user.role);
+
+    res.status(200).json({
+      success: true,
+      message: "Login Successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        image: user.profileImage,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error("Error during login:" + error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
