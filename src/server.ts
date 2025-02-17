@@ -1,9 +1,15 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import connectCloudinary from "./config/cloudinary";
 
 //initialize express
 const app = express();
+
+//cloudinary connect
+(async () => {
+  await connectCloudinary();
+})();
 
 //Middlewares
 app.use(cors());
