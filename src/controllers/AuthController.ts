@@ -26,6 +26,18 @@ export const registerUser = async (req: Request, res: Response) => {
       return;
     }
 
+    const existingPhoneNumber = await db.user.findUnique({
+      where: { phone },
+    });
+
+    //check if phone number already exists
+    if (existingPhoneNumber) {
+      res
+        .status(400)
+        .json({ success: false, message: "Phone number already exists" });
+      return;
+    }
+
     //Hash password
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
@@ -66,6 +78,7 @@ export const registerUser = async (req: Request, res: Response) => {
         name: createdUser.name,
         email: createdUser.email,
         role: createdUser.role,
+        image: createdUser.profileImage,
       },
       token,
     });

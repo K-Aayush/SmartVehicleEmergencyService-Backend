@@ -12,7 +12,7 @@ model User {
   id               String                @id @default(uuid())
   name             String                @db.VarChar(50)
   email            String                @unique
-  password         String                @db.VarChar(50)
+  password         String                 
   phone            String                @unique
   role             Role
   profileImage     String?
