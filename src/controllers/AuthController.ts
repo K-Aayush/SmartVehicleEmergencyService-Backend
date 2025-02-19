@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 
 //register api
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, companyName } = req.body;
   const imageFile = req.file;
 
   //check required fields
@@ -44,9 +44,14 @@ export const registerUser = async (req: Request, res: Response) => {
     const hashPassword = await bcrypt.hash(password, salt);
 
     //validate Roles
-    const allwoedRoles = ["USER", "VENDOR", "SERVICE_PROVIDER"];
-    if (!allwoedRoles.includes(role)) {
+    const allowedRoles = ["USER", "VENDOR", "SERVICE_PROVIDER"];
+    if (!allowedRoles.includes(role)) {
       res.status(400).json({ success: false, message: "Invalid role" });
+      return;
+    }
+
+    if (role === "VENDOR" && !companyName) {
+      res.status(400).json({ success: false, message: "Missing details" });
       return;
     }
 
@@ -63,6 +68,7 @@ export const registerUser = async (req: Request, res: Response) => {
       phone,
       role,
       profileImage: imageUpload?.secure_url,
+      companyName,
     };
 
     //store the userdata in database
@@ -80,6 +86,7 @@ export const registerUser = async (req: Request, res: Response) => {
         email: createdUser.email,
         role: createdUser.role,
         image: createdUser.profileImage,
+        companyName: createdUser.companyName,
       },
       token,
     });
