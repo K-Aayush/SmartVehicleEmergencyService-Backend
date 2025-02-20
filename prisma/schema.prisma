@@ -12,10 +12,11 @@ model User {
   id               String                @id @default(uuid())
   name             String                @db.VarChar(50)
   email            String                @unique
-  password         String                 
+  password         String
   phone            String                @unique
   role             Role
   profileImage     String?
+  companyName      String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   vehicles         Vehicle[]

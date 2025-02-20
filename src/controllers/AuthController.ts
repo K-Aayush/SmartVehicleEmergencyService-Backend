@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 
 //register api
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, companyName } = req.body;
   const imageFile = req.file;
 
   //check required fields
@@ -43,10 +43,20 @@ export const registerUser = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
 
+    console.log("Role value:", role);
+
     //validate Roles
-    const allwoedRoles = ["USER", "VENDOR", "SERVICE_PROVIDER"];
-    if (!allwoedRoles.includes(role)) {
+    const allowedRoles = ["USER", "VENDOR", "SERVICE_PROVIDER"];
+    if (!allowedRoles.includes(role)) {
       res.status(400).json({ success: false, message: "Invalid role" });
+      return;
+    }
+
+    if (role === "VENDOR" && !companyName) {
+      res.status(400).json({
+        success: false,
+        message: "Company name is required for VENDOR",
+      });
       return;
     }
 
@@ -63,6 +73,7 @@ export const registerUser = async (req: Request, res: Response) => {
       phone,
       role,
       profileImage: imageUpload?.secure_url,
+      companyName: role === "VENDOR" ? companyName : undefined,
     };
 
     //store the userdata in database
@@ -80,6 +91,7 @@ export const registerUser = async (req: Request, res: Response) => {
         email: createdUser.email,
         role: createdUser.role,
         image: createdUser.profileImage,
+        companyName: createdUser.companyName,
       },
       token,
     });
@@ -135,11 +147,39 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         image: user.profileImage,
+        company: user.companyName,
       },
       token,
     });
   } catch (error) {
     console.error("Error during login:" + error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+interface AuthenticatedRequest extends Request {
+  user?: any; // Replace 'any' with a specific user type if needed
+}
+
+export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
+    }
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      res.status(400).json({ success: false, message: "user not found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, user: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
