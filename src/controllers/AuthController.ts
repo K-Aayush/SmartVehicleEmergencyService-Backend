@@ -157,12 +157,36 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 };
 
-export const UserData = async (req: Request, res: Response) => {
+interface AuthRequest extends Request {
+  user?: { id: string };
+}
+
+export const getUserData = async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
+    }
     const user = await db.user.findUnique({
-      where: {id}
-    })
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        name: true,
+        profileImage: true,
+      },
+    });
+
+    if (!user) {
+      res.status(400).json({ success: false, message: "user not found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, user });
   } catch (error) {
-    
+    res.status(500).json({ success: false, message: "Interna; server error" });
   }
 };
