@@ -8,4 +8,6 @@ router.post("/register", upload.single("profileImage"), registerUser);
 
 router.post("/login", loginUser);
 
+router.get("/me")
+
 export default router;

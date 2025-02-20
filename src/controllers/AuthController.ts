@@ -43,6 +43,8 @@ export const registerUser = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
 
+    console.log("Role value:", role);
+
     //validate Roles
     const allowedRoles = ["USER", "VENDOR", "SERVICE_PROVIDER"];
     if (!allowedRoles.includes(role)) {
@@ -51,7 +53,10 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 
     if (role === "VENDOR" && !companyName) {
-      res.status(400).json({ success: false, message: "Missing details" });
+      res.status(400).json({
+        success: false,
+        message: "Company name is required for VENDOR",
+      });
       return;
     }
 
@@ -68,7 +73,7 @@ export const registerUser = async (req: Request, res: Response) => {
       phone,
       role,
       profileImage: imageUpload?.secure_url,
-      companyName,
+      companyName: role === "VENDOR" ? companyName : undefined,
     };
 
     //store the userdata in database
@@ -142,11 +147,22 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         image: user.profileImage,
+        company: user.companyName,
       },
       token,
     });
   } catch (error) {
     console.error("Error during login:" + error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+export const UserData = async (req: Request, res: Response) => {
+  try {
+    const user = await db.user.findUnique({
+      where: {id}
+    })
+  } catch (error) {
+    
   }
 };
