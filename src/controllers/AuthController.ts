@@ -157,11 +157,11 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 };
 
-interface AuthRequest extends Request {
-  user?: { id: string };
+interface AuthenticatedRequest extends Request {
+  user?: any; // Replace 'any' with a specific user type if needed
 }
 
-export const getUserData = async (req: AuthRequest, res: Response) => {
+export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
 
