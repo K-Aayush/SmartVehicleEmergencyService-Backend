@@ -171,13 +171,6 @@ export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
     }
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        name: true,
-        profileImage: true,
-      },
     });
 
     if (!user) {
@@ -185,8 +178,8 @@ export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    res.status(200).json({ success: true, user });
+    res.status(200).json({ success: true, user: user });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Interna; server error" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
