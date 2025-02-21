@@ -8,7 +8,7 @@ const router = express.Router();
 router.post(
   "/addProduct",
   authMiddleware,
-  upload.single("imageUrl"),
+  upload.array("imageUrl", 4),
   AddProduct
 );
 

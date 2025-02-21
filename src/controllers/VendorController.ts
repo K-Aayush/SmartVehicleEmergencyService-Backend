@@ -17,7 +17,7 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
   }
 
   const { name, category, price, stock } = req.body;
-  const imageFile = req.file;
+  const imageFile = req.files as Express.Multer.File[];
 
   console.log("Received body:", req.body);
   console.log("Received file:", req.file);
@@ -52,22 +52,29 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
       data: productData,
     });
 
-    const images = imageFile
-      ? await cloudinary.uploader.upload(imageFile.path)
-      : null;
+    const uploadImages = await Promise.all(
+      imageFile.map(async (file) => {
+        const result = await cloudinary.uploader.upload(file.path);
+        return result.secure_url;
+      })
+    );
 
-    const productImage = await db.productImage.create({
-      data: {
-        productId: newProduct.id,
-        imageUrl: images?.secure_url,
-      },
-    });
+    await Promise.all(
+      uploadImages.map(async (url) => {
+        await db.productImage.create({
+          data: {
+            productId: newProduct.id,
+            imageUrl: url,
+          },
+        });
+      })
+    );
 
     res.status(200).json({
       success: true,
       message: "Added New Product",
       product: newProduct,
-      images: productImage.imageUrl,
+      images: uploadImages,
     });
   } catch (error) {
     console.error("Error adding product:", error);
