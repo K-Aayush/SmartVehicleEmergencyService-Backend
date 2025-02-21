@@ -19,9 +19,6 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
   const { name, category, price, stock } = req.body;
   const imageFile = req.files as Express.Multer.File[];
 
-  console.log("Received body:", req.body);
-  console.log("Received file:", req.file);
-
   if (!name || !category || !price || !stock || !imageFile) {
     res.status(400).json({ success: false, message: "Missing details" });
     return;
@@ -81,5 +78,34 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
     res
       .status(500)
       .json({ success: false, message: "Internal server error", error });
+  }
+};
+
+//api to get product
+export const getProducts = async (req: Request, res: Response) => {
+  try {
+    //optional filter products
+    const { vendorId } = req.query;
+
+    const products = await db.product.findMany({
+      where: vendorId ? { vendorId: vendorId as string } : undefined,
+      include: {
+        images: true,
+        Vendor: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!products || products.length === 0) {
+      res.status(404).json({ success: false, message: "No Products Found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
