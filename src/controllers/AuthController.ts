@@ -158,7 +158,7 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 interface AuthenticatedRequest extends Request {
-  user?: any; // Replace 'any' with a specific user type if needed
+  user?: any;
 }
 
 export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
