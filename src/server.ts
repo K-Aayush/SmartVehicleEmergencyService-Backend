@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import authRoutes from "./routes/AuthRoutes";
+import vendorRoutes from "./routes/VendorRoutes";
 import connectCloudinary from "./config/cloudinary";
 
 //initialize express
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 //routes
 app.use("/api/auth", authRoutes);
+app.use("/api/vendor", vendorRoutes);
 
 const PORT = process.env.PORT || 5000;
 
