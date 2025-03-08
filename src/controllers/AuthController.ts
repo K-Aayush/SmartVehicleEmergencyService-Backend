@@ -183,3 +183,35 @@ export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+export const deleteUserData = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      res.status(400).json({ success: false, message: "user not found" });
+      return;
+    }
+
+    await db.user.delete({
+      where: { id: userId },
+    });
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+    console.log("hello:", error);
+  }
+};
