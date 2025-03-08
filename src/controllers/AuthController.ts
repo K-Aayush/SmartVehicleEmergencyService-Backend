@@ -161,6 +161,7 @@ interface AuthenticatedRequest extends Request {
   user?: any;
 }
 
+//getting user data
 export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -184,85 +185,34 @@ export const getUserData = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+//deleting user data
 export const deleteUserData = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
   try {
     const userId = req.user?.id;
-    const userRole = req.user?.role;
 
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized access" });
       return;
     }
 
-    //check the role of user
-    if (userRole === "VENDOR") {
-      //includes the products fields as it is foreign key of vendor
-      const vendorUser = await db.user.findUnique({
-        where: { id: userId },
-        include: { products: true },
-      });
+    //find the user
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
 
-      //check if vendor exists
-      if (!vendorUser) {
-        res.status(400).json({ success: false, message: "User not found" });
-        return;
-      }
-
-      //check length of vendor
-      if (vendorUser?.products && vendorUser.products.length > 0) {
-        await db.product.deleteMany({
-          where: { vendorId: userId },
-        });
-      }
-
-      //delete the vendor
-      await db.user.delete({
-        where: { id: userId },
-      });
-    } else if (userRole === "SERVICE_PROVIDER") {
-      //includes the service fields as it is foreign key of service provider
-      const serviceUser = await db.user.findUnique({
-        where: { id: userId },
-        include: { services: true },
-      });
-
-      //check if service provider exists
-      if (!serviceUser) {
-        res.status(400).json({ success: false, message: "User not found" });
-        return;
-      }
-
-      //check length of service provider
-      if (serviceUser?.services && serviceUser.services.length > 0) {
-        await db.service.deleteMany({
-          where: { serviceProviderId: userId },
-        });
-      }
-
-      //delete the service provider
-      await db.user.delete({
-        where: { id: userId },
-      });
-    } else {
-      //find the user
-      const user = await db.user.findUnique({
-        where: { id: userId },
-      });
-
-      //check if user exists
-      if (!user) {
-        res.status(400).json({ success: false, message: "user not found" });
-        return;
-      }
-
-      //delete the vendor
-      await db.user.delete({
-        where: { id: userId },
-      });
+    //check if user exists
+    if (!user) {
+      res.status(400).json({ success: false, message: "user not found" });
+      return;
     }
+
+    //delete the vendor
+    await db.user.delete({
+      where: { id: userId },
+    });
 
     res.status(200).json({ success: true });
   } catch (error) {
