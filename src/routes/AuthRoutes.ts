@@ -1,6 +1,7 @@
 import express from "express";
 import upload from "../config/multer";
 import {
+  changePassword,
   deleteUserData,
   getUserData,
   loginUser,
@@ -20,5 +21,7 @@ router.get("/me", authMiddleware, getUserData);
 router.delete("/me", authMiddleware, deleteUserData);
 
 router.put("/updateUserName", authMiddleware, updateUserName);
+
+router.put("/updatePassword", authMiddleware, changePassword);
 
 export default router;
