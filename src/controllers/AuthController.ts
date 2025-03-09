@@ -326,3 +326,56 @@ export const changePassword = async (
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+//Api to update phone number
+export const updatePhoneNumber = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+  const { phone } = req.body;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  if (!phone || phone.trim() === "") {
+    res
+      .status(400)
+      .json({ success: false, message: "Phone number cannot be empty" });
+    return;
+  }
+
+  try {
+    //find the user
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    //check if user exists
+    if (!user) {
+      res.status(404).json({ success: false, message: "user not found" });
+      return;
+    }
+
+    const updatePhoneNumber = await db.user.update({
+      where: { id: userId },
+      data: {
+        phone,
+      },
+      select: {
+        id: true,
+        phone: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Phone number updated successfully",
+      updatePhoneNumber,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

@@ -6,6 +6,7 @@ import {
   getUserData,
   loginUser,
   registerUser,
+  updatePhoneNumber,
   updateUserName,
 } from "../controllers/AuthController";
 import { authMiddleware } from "../middleware/authMiddleware";
@@ -23,5 +24,7 @@ router.delete("/me", authMiddleware, deleteUserData);
 router.put("/updateUserName", authMiddleware, updateUserName);
 
 router.put("/updatePassword", authMiddleware, changePassword);
+
+router.put("/updatePhone", authMiddleware, updatePhoneNumber);
 
 export default router;
