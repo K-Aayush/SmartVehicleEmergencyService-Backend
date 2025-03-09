@@ -5,6 +5,7 @@ import {
   getUserData,
   loginUser,
   registerUser,
+  updateUserName,
 } from "../controllers/AuthController";
 import { authMiddleware } from "../middleware/authMiddleware";
 
@@ -17,5 +18,7 @@ router.post("/login", loginUser);
 router.get("/me", authMiddleware, getUserData);
 
 router.delete("/me", authMiddleware, deleteUserData);
+
+router.put("/updateUserName", authMiddleware, updateUserName);
 
 export default router;
