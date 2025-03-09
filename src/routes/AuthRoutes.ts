@@ -7,6 +7,7 @@ import {
   loginUser,
   registerUser,
   updatePhoneNumber,
+  updateProfile,
   updateUserName,
 } from "../controllers/AuthController";
 import { authMiddleware } from "../middleware/authMiddleware";
@@ -26,5 +27,12 @@ router.put("/updateUserName", authMiddleware, updateUserName);
 router.put("/updatePassword", authMiddleware, changePassword);
 
 router.put("/updatePhone", authMiddleware, updatePhoneNumber);
+
+router.put(
+  "/updateProfile",
+  authMiddleware,
+  upload.single("profileImage"),
+  updateProfile
+);
 
 export default router;

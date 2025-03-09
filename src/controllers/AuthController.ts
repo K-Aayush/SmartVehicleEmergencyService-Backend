@@ -379,3 +379,60 @@ export const updatePhoneNumber = async (
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+export const updateProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+  const imageFile = req.file;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  if (!imageFile) {
+    res.status(400).json({ success: false, message: "Image cannot be empty" });
+    return;
+  }
+
+  try {
+    //find the user
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    //check if user exists
+    if (!user) {
+      res.status(404).json({ success: false, message: "user not found" });
+      return;
+    }
+
+    //optional imageUpload field
+    const imageUpload = imageFile
+      ? await cloudinary.uploader.upload(imageFile.path)
+      : null;
+
+    const updateImage = await db.user.update({
+      where: { id: userId },
+      data: {
+        profileImage: imageUpload?.secure_url,
+      },
+      select: {
+        id: true,
+        profileImage: true,
+      },
+    });
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Profile changed successfully",
+        updateImage,
+      });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
