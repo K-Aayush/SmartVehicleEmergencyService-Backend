@@ -3,6 +3,7 @@ import upload from "../config/multer";
 import { authMiddleware } from "../middleware/authMiddleware";
 import {
   AddProduct,
+  getLowStockProducts,
   getProducts,
   updateProductStock,
 } from "../controllers/VendorController";
@@ -17,6 +18,7 @@ router.post(
 );
 
 router.get("/getProducts", getProducts);
-router.put("/updateProductStock", updateProductStock);
+router.put("/updateProductStock", authMiddleware, updateProductStock);
+router.get("/getLowStockProducts", authMiddleware, getLowStockProducts);
 
 export default router;
