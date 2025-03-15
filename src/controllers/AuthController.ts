@@ -380,10 +380,7 @@ export const updatePhoneNumber = async (
   }
 };
 
-export const updateProfile = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const hi = async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   const imageFile = req.file;
 
@@ -425,14 +422,15 @@ export const updateProfile = async (
       },
     });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Profile changed successfully",
-        updateImage,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Profile changed successfully",
+      updateImage,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+export const updateProfile = (req: AuthenticatedRequest, res: Response) => {
+
