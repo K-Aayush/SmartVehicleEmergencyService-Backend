@@ -171,3 +171,46 @@ export const updateProductStock = async (
     });
   }
 };
+
+//Api to check low product stock for a vendor
+export const getLowStockProducts = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+  const { threshold = 5 } = req.query; // Default threshold is 5
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  try {
+    const lowStockProducts = await db.product.findMany({
+      where: {
+        vendorId: userId,
+        stock: {
+          lte: Number(threshold),
+        },
+      },
+      include: {
+        images: true,
+      },
+      orderBy: {
+        stock: "asc",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      lowStockProducts,
+    });
+  } catch (error) {
+    console.error("Error fetching low stock products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
