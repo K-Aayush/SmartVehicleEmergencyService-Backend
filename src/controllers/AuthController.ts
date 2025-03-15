@@ -214,167 +214,9 @@ export const deleteUserData = async (
       where: { id: userId },
     });
 
-    res.status(200).json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
-//Api to update name
-export const updateUserName = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const userId = req.user?.id;
-  const { name } = req.body;
-
-  if (!userId) {
-    res.status(401).json({ success: false, message: "Unauthorized access" });
-    return;
-  }
-
-  if (!name || name.trim() === "") {
-    res.status(400).json({ success: false, message: "Name cannot be empty" });
-    return;
-  }
-
-  try {
-    //find the user
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    //check if user exists
-    if (!user) {
-      res.status(404).json({ success: false, message: "user not found" });
-      return;
-    }
-
-    const updateUserName = await db.user.update({
-      where: { id: userId },
-      data: { name },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Name Updated Successfully",
-      updateUserName,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
-//Api to change password
-export const changePassword = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const userId = req.user?.id;
-  const { oldPassword, newPassword } = req.body;
-
-  if (!userId) {
-    res.status(401).json({ success: false, message: "Unauthorized access" });
-    return;
-  }
-
-  if (!newPassword || !oldPassword) {
-    res
-      .status(400)
-      .json({ success: false, message: "password cannot be empty" });
-    return;
-  }
-
-  try {
-    //find the user
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    //check if user exists
-    if (!user) {
-      res.status(404).json({ success: false, message: "user not found" });
-      return;
-    }
-
-    //compare the old password
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-
-    if (!isMatch) {
-      res.status(400).json({ success: false, message: "Invalid password" });
-      return;
-    }
-
-    // Hash the new password before saving
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await db.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword,
-      },
-    });
-
     res
       .status(200)
-      .json({ success: true, message: "Password updated successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
-//Api to update phone number
-export const updatePhoneNumber = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const userId = req.user?.id;
-  const { phone } = req.body;
-
-  if (!userId) {
-    res.status(401).json({ success: false, message: "Unauthorized access" });
-    return;
-  }
-
-  if (!phone || phone.trim() === "") {
-    res
-      .status(400)
-      .json({ success: false, message: "Phone number cannot be empty" });
-    return;
-  }
-
-  try {
-    //find the user
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    //check if user exists
-    if (!user) {
-      res.status(404).json({ success: false, message: "user not found" });
-      return;
-    }
-
-    const updatePhoneNumber = await db.user.update({
-      where: { id: userId },
-      data: {
-        phone,
-      },
-      select: {
-        id: true,
-        phone: true,
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Phone number updated successfully",
-      updatePhoneNumber,
-    });
+      .json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
@@ -384,7 +226,8 @@ export const updateProfile = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const userId = req.user?.id;
+  const userId = req.user.id;
+  const updates = req.body;
   const imageFile = req.file;
 
   if (!userId) {
@@ -392,47 +235,53 @@ export const updateProfile = async (
     return;
   }
 
-  if (!imageFile) {
-    res.status(400).json({ success: false, message: "Image cannot be empty" });
-    return;
-  }
-
   try {
-    //find the user
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
-
     //check if user exists
-    if (!user) {
-      res.status(404).json({ success: false, message: "user not found" });
+    const existingUser = await db.user.findUnique({ where: { id: userId } });
+
+    if (!existingUser) {
+      res.status(400).json({ success: false, message: "User not found" });
       return;
     }
 
-    //optional imageUpload field
-    const imageUpload = imageFile
-      ? await cloudinary.uploader.upload(imageFile.path)
-      : null;
+    // If updating password, check old password and hash new password
+    if (updates.oldPassword && updates.newPassword) {
+      const isMatch = await bcrypt.compare(
+        updates.oldPassword,
+        existingUser.password
+      );
+      if (!isMatch) {
+        res.status(400).json({ success: false, message: "Invalid password" });
+        return;
+      }
 
-    const updateImage = await db.user.update({
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(updates.newPassword, salt);
+
+      // Remove oldPassword and newPassword from updates to avoid accidental storage
+      delete updates.oldPassword;
+      delete updates.newPassword;
+    }
+
+    // Optional image upload to Cloudinary
+    if (imageFile) {
+      const uploadResult = await cloudinary.uploader.upload(imageFile.path);
+      updates.profileImage = uploadResult.secure_url;
+    }
+
+    //update the user and store in the database
+    const updatedUser = await db.user.update({
       where: { id: userId },
-      data: {
-        profileImage: imageUpload?.secure_url,
-      },
-      select: {
-        id: true,
-        profileImage: true,
-      },
+      data: updates,
     });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Profile changed successfully",
-        updateImage,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Profile Updated Successfully",
+      user: updatedUser,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Internal Server error" });
   }
 };
