@@ -109,3 +109,65 @@ export const getProducts = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
+//api to update product stock
+export const updateProductStock = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  const { productId, newStock } = req.body;
+
+  if (!productId || newStock === undefined || newStock < 0) {
+    res.status(400).json({
+      success: false,
+      message: "Product ID and valid stock amount are required",
+    });
+    return;
+  }
+
+  try {
+    // Check if the product exists and belongs to the vendor
+    const product = await db.product.findFirst({
+      where: {
+        id: productId,
+        vendorId: userId,
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found or you don't have permission to update it",
+      });
+      return;
+    }
+
+    // Update product stock
+    const updatedProduct = await db.product.update({
+      where: { id: productId },
+      data: {
+        stock: newStock,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Product stock updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product stock:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
