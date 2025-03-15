@@ -15,7 +15,7 @@ export const authMiddleware = async (
 
   if (!token) {
     res
-      .status(201)
+      .status(401)
       .json({ success: false, message: "Not authroized, login Again" });
     return;
   }
@@ -36,7 +36,7 @@ export const authMiddleware = async (
     }
 
     req.user = user;
-    
+
     next();
   } catch (error) {
     console.error("jwt error: ", error);
