@@ -5,6 +5,7 @@ import authRoutes from "./routes/AuthRoutes";
 import vendorRoutes from "./routes/VendorRoutes";
 import adminRoutes from "./routes/AdminRoutes";
 import paymentRoutes from "./routes/PaymentRoutes";
+import orderRoutes from "./routes/orderRoutes";
 import connectCloudinary from "./config/cloudinary";
 
 //initialize express
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/order", orderRoutes);
 
 const PORT = process.env.PORT || 5000;
 
