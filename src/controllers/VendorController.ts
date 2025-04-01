@@ -85,7 +85,20 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
 export const getProducts = async (req: Request, res: Response) => {
   try {
     //optional filter products
-    const { vendorId } = req.query;
+    const { vendorId, sortBy, order } = req.query;
+
+    //Allowed sorting fields
+    const allowedSortFields = ["price", "createdAt", "stock", "name"];
+
+    // Default sorting: by `createdAt` in descending order (newest first)
+    let orderBy = { createdAt: "desc" } as Record<string, "asc" | "desc">;
+
+    // Apply sorting if valid sortBy field is provided
+    if (sortBy && allowedSortFields.includes(sortBy as string)) {
+      orderBy = {
+        [sortBy as string]: order === "asc" ? "asc" : "desc", 
+      };
+    }
 
     const products = await db.product.findMany({
       where: vendorId ? { vendorId: vendorId as string } : undefined,
@@ -94,9 +107,11 @@ export const getProducts = async (req: Request, res: Response) => {
         Vendor: {
           select: {
             name: true,
+            companyName: true,
           },
         },
       },
+      orderBy,
     });
 
     if (!products || products.length === 0) {

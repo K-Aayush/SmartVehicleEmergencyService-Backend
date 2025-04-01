@@ -248,7 +248,7 @@ export const updateProfile = async (
     if (updates.oldPassword && updates.newPassword) {
       const isMatch = await bcrypt.compare(
         updates.oldPassword,
-        existingUser.password
+        existingUser.password 
       );
       if (!isMatch) {
         res.status(400).json({ success: false, message: "Invalid password" });
