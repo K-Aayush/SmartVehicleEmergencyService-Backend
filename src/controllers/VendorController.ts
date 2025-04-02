@@ -96,7 +96,7 @@ export const getProducts = async (req: Request, res: Response) => {
     // Apply sorting if valid sortBy field is provided
     if (sortBy && allowedSortFields.includes(sortBy as string)) {
       orderBy = {
-        [sortBy as string]: order === "asc" ? "asc" : "desc", 
+        [sortBy as string]: order === "asc" ? "asc" : "desc",
       };
     }
 
@@ -120,6 +120,40 @@ export const getProducts = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+//api to get product
+export const getProductsById = async (req: Request, res: Response) => {
+  try {
+    //optional filter products
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ success: false, message: "ID is required" });
+      return;
+    }
+
+    const product = await db.product.findUnique({
+      where: { id: id as string },
+      include: {
+        images: true,
+        Vendor: {
+          select: {
+            name: true,
+            companyName: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({ success: false, message: "No Product Found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }

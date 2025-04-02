@@ -5,6 +5,7 @@ import {
   AddProduct,
   getLowStockProducts,
   getProducts,
+  getProductsById,
   updateProductStock,
 } from "../controllers/VendorController";
 
@@ -18,6 +19,7 @@ router.post(
 );
 
 router.get("/getProducts", getProducts);
+router.get("/getProductById/:id", getProductsById);
 router.put("/updateProductStock", authMiddleware, updateProductStock);
 router.get("/getLowStockProducts", authMiddleware, getLowStockProducts);
 
