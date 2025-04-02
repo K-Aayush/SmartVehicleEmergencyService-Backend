@@ -85,7 +85,20 @@ export const AddProduct = async (req: AuthenticatedRequest, res: Response) => {
 export const getProducts = async (req: Request, res: Response) => {
   try {
     //optional filter products
-    const { vendorId } = req.query;
+    const { vendorId, sortBy, order } = req.query;
+
+    //Allowed sorting fields
+    const allowedSortFields = ["price", "createdAt", "stock", "name"];
+
+    // Default sorting: by `createdAt` in descending order (newest first)
+    let orderBy = { createdAt: "desc" } as Record<string, "asc" | "desc">;
+
+    // Apply sorting if valid sortBy field is provided
+    if (sortBy && allowedSortFields.includes(sortBy as string)) {
+      orderBy = {
+        [sortBy as string]: order === "asc" ? "asc" : "desc",
+      };
+    }
 
     const products = await db.product.findMany({
       where: vendorId ? { vendorId: vendorId as string } : undefined,
@@ -94,9 +107,11 @@ export const getProducts = async (req: Request, res: Response) => {
         Vendor: {
           select: {
             name: true,
+            companyName: true,
           },
         },
       },
+      orderBy,
     });
 
     if (!products || products.length === 0) {
@@ -105,6 +120,40 @@ export const getProducts = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+//api to get product
+export const getProductsById = async (req: Request, res: Response) => {
+  try {
+    //optional filter products
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ success: false, message: "ID is required" });
+      return;
+    }
+
+    const product = await db.product.findUnique({
+      where: { id: id as string },
+      include: {
+        images: true,
+        Vendor: {
+          select: {
+            name: true,
+            companyName: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({ success: false, message: "No Product Found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
