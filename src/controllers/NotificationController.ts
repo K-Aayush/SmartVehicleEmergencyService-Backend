@@ -14,9 +14,8 @@ export const getUserNotifications = async (
     const userId = req.user.id;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access" });
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
     }
 
     const notifications = await db.notification.findMany({
@@ -24,7 +23,7 @@ export const getUserNotifications = async (
       orderBy: { createdAt: "desc" },
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       notifications,
     });
@@ -44,15 +43,15 @@ export const markNotificationAsRead = async (
     const { id } = req.params;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access" });
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
     }
 
     if (!id) {
-      return res
+      res
         .status(400)
         .json({ success: false, message: "Notification ID is required" });
+      return;
     }
 
     // Check if notification exists and belongs to user
@@ -64,9 +63,10 @@ export const markNotificationAsRead = async (
     });
 
     if (!notification) {
-      return res
+      res
         .status(404)
         .json({ success: false, message: "Notification not found" });
+      return;
     }
 
     // Update notification
@@ -75,7 +75,7 @@ export const markNotificationAsRead = async (
       data: { isRead: true },
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       notification: updatedNotification,
     });
@@ -94,9 +94,8 @@ export const markAllNotificationsAsRead = async (
     const userId = req.user.id;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access" });
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
     }
 
     // Update all unread notifications for user
@@ -108,7 +107,7 @@ export const markAllNotificationsAsRead = async (
       data: { isRead: true },
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "All notifications marked as read",
     });
@@ -118,7 +117,7 @@ export const markAllNotificationsAsRead = async (
   }
 };
 
-// Create a notification (for internal use)
+// Create a notification
 export const createNotification = async (userId: string, message: string) => {
   try {
     const notification = await db.notification.create({
