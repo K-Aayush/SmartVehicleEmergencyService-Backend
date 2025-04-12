@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "../lib/prisma";
 import Stripe from "stripe";
+import { createNotification } from "./NotificationController";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -131,7 +132,16 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
 
     const order = await db.order.findUnique({
       where: { id: orderId },
-      include: { product: true },
+      include: {
+        product: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -143,6 +153,12 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
       res.status(404).json({ success: false, message: "Order not found" });
       return;
     }
+
+    // Format price
+    const formattedPrice = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(order.totalPrice);
 
     // Update payment status and process order
     if (paymentIntent.status === "succeeded") {
@@ -160,6 +176,24 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
         },
       });
 
+      // Create a notification for the user
+      await createNotification(
+        order.user.id,
+        `Payment of ${formattedPrice} for ${order.product.name} was successful!`
+      );
+
+      // Create a notification for the vendor
+      if (order.product.vendorId) {
+        await createNotification(
+          order.product.vendorId,
+          `Payment received! ${
+            order.user.name || "A customer"
+          } has completed payment of ${formattedPrice} for ${
+            order.quantity
+          } x ${order.product.name}. Order ID: ${order.id.slice(0, 8)}...`
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: "Payment successful and order processed",
@@ -173,6 +207,12 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
         data: { status: "INPROGRESS" },
       });
 
+      // Create a notification for the user
+      await createNotification(
+        order.user.id,
+        `Your payment for ${order.product.name} is being processed.`
+      );
+
       res.status(200).json({
         success: true,
         message: "Payment is being processed",
@@ -180,7 +220,12 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
         stripeStatus: paymentIntent.status,
       });
     } else {
-      // Payment failed or is still pending
+      // Create a notification for the user
+      await createNotification(
+        order.user.id,
+        `There was an issue with your payment for ${order.product.name}. Status: ${paymentIntent.status}`
+      );
+
       res.status(200).json({
         success: false,
         message: "Payment not completed",

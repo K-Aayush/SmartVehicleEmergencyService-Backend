@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../lib/prisma";
+import { createNotification } from "./NotificationController";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -72,6 +73,14 @@ export const orderProduct = async (
     // Check if the product exists and has enough stock
     const product = await db.product.findUnique({
       where: { id: productId },
+      include: {
+        Vendor: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -88,8 +97,20 @@ export const orderProduct = async (
       return;
     }
 
+    // Get user details for vendor notification
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
     // Calculate total price
     const totalPrice = product.price * quantity;
+
+    // Format price
+    const formattedPrice = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(totalPrice);
 
     // Create the order
     const newOrder = await db.order.create({
@@ -108,6 +129,26 @@ export const orderProduct = async (
         stock: product.stock - quantity,
       },
     });
+
+    // Create a notification for the user
+    await createNotification(
+      userId,
+      `Your order for ${
+        product.name
+      } has been placed successfully! Order ID: ${newOrder.id.slice(0, 8)}...`
+    );
+
+    // Create a notification for the vendor
+    if (product.Vendor && product.Vendor.id) {
+      await createNotification(
+        product.Vendor.id,
+        `New order received! ${
+          user?.name || "A customer"
+        } has ordered ${quantity} x ${
+          product.name
+        } for ${formattedPrice}. Order ID: ${newOrder.id.slice(0, 8)}...`
+      );
+    }
 
     res.status(200).json({
       success: true,
