@@ -164,3 +164,80 @@ export const orderProduct = async (
     });
   }
 };
+
+// Get order details by ID
+export const getOrderById = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  try {
+    // Find the order
+    const order = await db.order.findUnique({
+      where: { id },
+      include: {
+        product: {
+          include: {
+            images: true,
+            Vendor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        user: {
+          include: {
+            payment: {
+              select: {
+                id: true,
+                status: true,
+                paymentMethod: true,
+                amount: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Check if order exists and belongs to the user
+    if (!order) {
+      res.status(404).json({ success: false, message: "Order not found" });
+      return;
+    }
+
+    // Check if the order belongs to the user or the vendor of the product
+    const isVendor = order.product.vendorId === userId;
+    const isOwner = order.userId === userId;
+
+    if (!isOwner && !isVendor) {
+      res.status(403).json({
+        success: false,
+        message: "You don't have permission to view this order",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
