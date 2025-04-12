@@ -105,14 +105,15 @@ model ProductImage {
 
 //order model for user orders
 model Order {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   userId     String
   productId  String
   quantity   Int
   totalPrice Float
-  orderDate  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status     OrderStatus @default(PROCESSING)
+  orderDate  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 //Review model for products and services reviewed by users
@@ -188,4 +189,11 @@ enum PaymentStatus {
 enum PaymentType {
   CREDIT
   WALLET
+}
+
+enum OrderStatus {
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
 }
