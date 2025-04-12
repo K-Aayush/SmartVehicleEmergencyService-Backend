@@ -4,6 +4,7 @@ import {
   getUserNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getVendorNotifications,
 } from "../controllers/NotificationController";
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.put(
   authMiddleware,
   markAllNotificationsAsRead
 );
+router.get("/vendor/notifications", authMiddleware, getVendorNotifications);
 
 export default router;

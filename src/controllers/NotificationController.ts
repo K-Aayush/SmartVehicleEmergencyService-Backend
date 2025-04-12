@@ -134,3 +134,31 @@ export const createNotification = async (userId: string, message: string) => {
     return null;
   }
 };
+
+// Get vendor notifications
+export const getVendorNotifications = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const vendorId = req.user.id;
+
+    if (!vendorId) {
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
+    }
+
+    const notifications = await db.notification.findMany({
+      where: { userId: vendorId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.status(200).json({
+      success: true,
+      notifications,
+    });
+  } catch (error) {
+    console.error("Get vendor notifications error:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
