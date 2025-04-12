@@ -91,7 +91,7 @@ export const createStripePayment = async (
       data: {
         userId,
         amount: totalPrice,
-        paymentMethod: paymentMethod === "WALLET" ? "WALLET" : "credit",
+        paymentMethod: paymentMethod === "WALLET" ? "WALLET" : "CREDIT",
         status: "PENDING",
       },
     });
