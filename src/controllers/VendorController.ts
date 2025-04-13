@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
+import { createNotification } from "./NotificationController";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -260,6 +261,100 @@ export const getLowStockProducts = async (
       success: false,
       message: "Internal server error",
       error,
+    });
+  }
+};
+
+// Update order status
+export const updateOrderStatus = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const vendorId = req.user?.id;
+  const { orderId, status } = req.body;
+
+  if (!vendorId || !orderId || !status) {
+    res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+    });
+    return;
+  }
+
+  try {
+    // Find the order and check if it belongs to a product from this vendor
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        product: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    // Check if the product belongs to this vendor
+    if (order.product.vendorId !== vendorId) {
+      res.status(403).json({
+        success: false,
+        message: "You don't have permission to update this order",
+      });
+      return;
+    }
+
+    // Update the order status
+    const updatedOrder = await db.order.update({
+      where: { id: orderId },
+      data: { status },
+      include: {
+        product: true,
+      },
+    });
+
+    // Create a notification for the user
+    let notificationMessage = "";
+
+    switch (status.toUpperCase()) {
+      case "PROCESSING":
+        notificationMessage = `Your order for ${order.product.name} is now being processed.`;
+        break;
+      case "SHIPPED":
+        notificationMessage = `Great news! Your order for ${order.product.name} has been shipped.`;
+        break;
+      case "DELIVERED":
+        notificationMessage = `Your order for ${order.product.name} has been delivered. Enjoy!`;
+        break;
+      case "COMPLETED":
+        notificationMessage = `Your order for ${order.product.name} is now complete. Thank you for your purchase!`;
+        break;
+      default:
+        notificationMessage = `The status of your order for ${order.product.name} has been updated to ${status}.`;
+    }
+
+    await createNotification(order.user.id, notificationMessage);
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };

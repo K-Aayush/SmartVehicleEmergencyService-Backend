@@ -1,10 +1,15 @@
 import express from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
-import { khaltiLookup, khaltiPayment } from "../controllers/PaymentController";
+import {
+  createStripePayment,
+  getUserPayments,
+  verifyStripePayment,
+} from "../controllers/PaymentController";
 
 const router = express.Router();
 
-router.post("/khalti", authMiddleware, khaltiPayment);
-router.post("/khalti-lookup", khaltiLookup);
+router.post("/create-payment", authMiddleware, createStripePayment);
+router.post("/verify-payment", verifyStripePayment);
+router.get("/payment-history", authMiddleware, getUserPayments);
 
 export default router;
