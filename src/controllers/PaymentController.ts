@@ -176,6 +176,17 @@ export const verifyStripePayment = async (req: Request, res: Response) => {
         },
       });
 
+      // Create initial chat message
+      await db.chat.create({
+        data: {
+          senderId: order.user.id,
+          receiverId: order.product.vendorId,
+          message: `Hi, I've just placed an order for ${order.quantity}x ${
+            order.product.name
+          }. Order ID: ${orderId.slice(0, 8)}...`,
+        },
+      });
+
       // Create a notification for the user
       await createNotification(
         order.user.id,

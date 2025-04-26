@@ -136,7 +136,9 @@ export const orderProduct = async (
         data: {
           senderId: userId,
           receiverId: product.Vendor.id,
-          message: `Hi, I've just placed an order for ${quantity}x ${product.name}. Order ID: ${newOrder.id.slice(0, 8)}...`,
+          message: `Hi, I've just placed an order for ${quantity}x ${
+            product.name
+          }. Order ID: ${newOrder.id.slice(0, 8)}...`,
           isRead: false,
         },
       });
@@ -246,6 +248,59 @@ export const getOrderById = async (
     });
   } catch (error) {
     console.error("Error fetching order details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
+
+// API to get vendor orders
+export const getVendorOrders = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const vendorId = req.user?.id;
+
+  if (!vendorId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  try {
+    const orders = await db.order.findMany({
+      where: {
+        product: {
+          vendorId: vendorId,
+        },
+      },
+      include: {
+        product: {
+          include: {
+            images: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+      orderBy: {
+        orderDate: "desc",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error("Error fetching vendor orders:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
