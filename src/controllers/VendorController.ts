@@ -265,6 +265,182 @@ export const getLowStockProducts = async (
   }
 };
 
+// Update product
+export const updateProduct = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  const { productId, name, category, price, stock } = req.body;
+  const imageFile = req.files as Express.Multer.File[];
+
+  if (!productId || (!name && !category && !price && !stock && !imageFile)) {
+    res.status(400).json({
+      success: false,
+      message: "Product ID and at least one field to update are required",
+    });
+    return;
+  }
+
+  try {
+    // Check if the product exists and belongs to the vendor
+    const product = await db.product.findFirst({
+      where: {
+        id: productId,
+        vendorId: userId,
+      },
+      include: {
+        images: true,
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found or you don't have permission to update it",
+      });
+      return;
+    }
+
+    // Prepare update data
+    const updateData: Prisma.ProductUpdateInput = {};
+    if (name) updateData.name = name;
+    if (category) updateData.category = category;
+    if (price) updateData.price = parseFloat(price);
+    if (stock) updateData.stock = parseInt(stock);
+
+    // Update product
+    const updatedProduct = await db.product.update({
+      where: { id: productId },
+      data: updateData,
+    });
+
+    // Handle image updates if provided
+    if (imageFile && imageFile.length > 0) {
+      // Delete existing images from Cloudinary
+      for (const image of product.images) {
+        if (image.imageUrl) {
+          const publicId = image.imageUrl.split("/").pop()?.split(".")[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId);
+          }
+        }
+      }
+
+      // Delete existing image records
+      await db.productImage.deleteMany({
+        where: { productId },
+      });
+
+      // Upload new images
+      const uploadImages = await Promise.all(
+        imageFile.map(async (file) => {
+          const result = await cloudinary.uploader.upload(file.path);
+          return result.secure_url;
+        })
+      );
+
+      // Create new image records
+      await Promise.all(
+        uploadImages.map(async (url) => {
+          await db.productImage.create({
+            data: {
+              productId,
+              imageUrl: url,
+            },
+          });
+        })
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
+
+// Delete product
+export const deleteProduct = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.user?.id;
+  const { productId } = req.params;
+
+  if (!userId) {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  if (!productId) {
+    res.status(400).json({ success: false, message: "Product ID is required" });
+    return;
+  }
+
+  try {
+    // Check if the product exists and belongs to the vendor
+    const product = await db.product.findFirst({
+      where: {
+        id: productId,
+        vendorId: userId,
+      },
+      include: {
+        images: true,
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found or you don't have permission to delete it",
+      });
+      return;
+    }
+
+    // Delete images from Cloudinary
+    for (const image of product.images) {
+      if (image.imageUrl) {
+        const publicId = image.imageUrl.split("/").pop()?.split(".")[0];
+        if (publicId) {
+          await cloudinary.uploader.destroy(publicId);
+        }
+      }
+    }
+
+    // Delete the product (this will cascade delete images due to the relation)
+    await db.product.delete({
+      where: { id: productId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
+
 // Update order status
 export const updateOrderStatus = async (
   req: AuthenticatedRequest,
