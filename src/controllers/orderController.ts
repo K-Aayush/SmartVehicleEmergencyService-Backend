@@ -130,6 +130,18 @@ export const orderProduct = async (
       },
     });
 
+    // Create initial chat message
+    if (product.Vendor && product.Vendor.id) {
+      await db.chat.create({
+        data: {
+          senderId: userId,
+          receiverId: product.Vendor.id,
+          message: `Hi, I've just placed an order for ${quantity}x ${product.name}. Order ID: ${newOrder.id.slice(0, 8)}...`,
+          isRead: false,
+        },
+      });
+    }
+
     // Create a notification for the user
     await createNotification(
       userId,

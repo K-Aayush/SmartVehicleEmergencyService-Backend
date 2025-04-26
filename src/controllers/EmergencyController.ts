@@ -74,8 +74,17 @@ export const requestEmergencyAssistance = async (
       },
     });
 
-    // Notify nearby service providers
+    // Notify nearby service providers and initiate chat
     for (const provider of providers) {
+      // Create initial chat message
+      await db.chat.create({
+        data: {
+          senderId: userId,
+          receiverId: provider.id,
+          message: `Emergency ${assistanceType} assistance needed for my ${emergencyRequest.vehicle.year} ${emergencyRequest.vehicle.brand} ${emergencyRequest.vehicle.model}. Location: ${latitude},${longitude}`,
+        },
+      });
+
       await createNotification(
         provider.id,
         `Emergency assistance needed! ${emergencyRequest.user.name} needs ${assistanceType} assistance for their ${emergencyRequest.vehicle.year} ${emergencyRequest.vehicle.brand} ${emergencyRequest.vehicle.model}.`
