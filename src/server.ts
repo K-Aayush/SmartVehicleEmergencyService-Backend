@@ -49,7 +49,7 @@ app.use("/api/notification", notificationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/emergency", emergencyRoutes);
-app.use("/api/venhcle", vehicleRoutes);
+app.use("/api/vehicle", vehicleRoutes);
 
 const PORT = process.env.PORT || 5000;
 

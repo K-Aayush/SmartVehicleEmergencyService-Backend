@@ -7,11 +7,13 @@ import {
   getVehicleById,
   updateVehicle,
   deleteVehicle,
+  getAllVehices,
 } from "../controllers/VehicleController";
 
 const router = express.Router();
 
 router.post("/", authMiddleware, upload.single("image"), addVehicle);
+router.get("/getAllVehicles", getAllVehices);
 router.get("/", authMiddleware, getUserVehicles);
 router.get("/:id", authMiddleware, getVehicleById);
 router.put("/:id", authMiddleware, upload.single("image"), updateVehicle);

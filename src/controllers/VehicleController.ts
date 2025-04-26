@@ -97,6 +97,26 @@ export const getUserVehicles = async (
   }
 };
 
+// Get user's vehicles
+export const getAllVehices = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const vehicles = await db.vehicle.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.status(200).json({
+      success: true,
+      vehicles,
+    });
+  } catch (error) {
+    console.error("Error fetching vehicles:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // Get vehicle by ID
 export const getVehicleById = async (
   req: AuthenticatedRequest,
