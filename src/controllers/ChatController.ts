@@ -5,6 +5,85 @@ interface AuthenticatedRequest extends Request {
   user?: any;
 }
 
+// Get chats by role
+export const getChatsByRole = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.id;
+    const { role } = req.params;
+
+    if (!userId || !role) {
+      res
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+      return;
+    }
+
+    // Get all unique conversations where the user has participated
+    const conversations = await db.chat.findMany({
+      where: {
+        OR: [{ senderId: userId }, { receiverId: userId }],
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profileImage: true,
+            companyName: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profileImage: true,
+            companyName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Filter conversations by role and get the latest message for each unique conversation
+    const uniqueConversations = new Map();
+
+    conversations.forEach((chat) => {
+      const otherUser = chat.senderId === userId ? chat.receiver : chat.sender;
+
+      if (otherUser.role === role) {
+        const conversationKey = otherUser.id;
+
+        if (
+          !uniqueConversations.has(conversationKey) ||
+          chat.createdAt > uniqueConversations.get(conversationKey).createdAt
+        ) {
+          uniqueConversations.set(conversationKey, {
+            ...chat,
+            otherUser,
+          });
+        }
+      }
+    });
+
+    const result = Array.from(uniqueConversations.values());
+
+    res.status(200).json({
+      success: true,
+      conversations: result,
+    });
+  } catch (error) {
+    console.error("Error fetching chats by role:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // Get chat history between two users
 export const getChatHistory = async (
   req: AuthenticatedRequest,
