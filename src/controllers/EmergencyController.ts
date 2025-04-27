@@ -207,6 +207,50 @@ export const getNearbyEmergencyRequests = async (
   }
 };
 
+// Get service provider's emergency request history
+export const getProviderEmergencyRequests = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const providerId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!providerId || userRole !== "SERVICE_PROVIDER") {
+      res.status(401).json({ success: false, message: "Unauthorized access" });
+      return;
+    }
+
+    const requests = await db.emergencyAssistance.findMany({
+      where: {
+        OR: [{ status: "INPROGRESS" }, { status: "COMPLETED" }],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        vehicle: {
+          select: {
+            brand: true,
+            model: true,
+            year: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.status(200).json({ success: true, requests });
+  } catch (error) {
+    console.error("Error fetching provider emergency requests:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // Accept emergency request
 export const acceptEmergencyRequest = async (
   req: AuthenticatedRequest,
