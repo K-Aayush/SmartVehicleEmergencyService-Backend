@@ -33,6 +33,7 @@ export const getAllUsers = async (req: AuthenticatedRequest, res: Response) => {
         createdAt: true,
         isOnline: true,
         lastSeen: true,
+        isBanned: true,
       },
     });
 
@@ -70,6 +71,7 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response) => {
         vehicles: true,
         services: true,
         products: true,
+        isBanned: true,
         orders: {
           include: {
             product: true,
@@ -124,20 +126,69 @@ export const banUser = async (req: AuthenticatedRequest, res: Response) => {
       `Your account has been banned. Reason: ${reason}`
     );
 
-    // In a real application, you might want to:
-    // 1. Set a banned flag in the user table
-    // 2. Revoke all active sessions
-    // 3. Log the ban action
-    // 4. Send an email to the user
-    // For this example, we'll just delete the user
-
-    await db.user.delete({
+    // You might want to set a banned flag instead of deleting the user
+    await db.user.update({
       where: { id: userId },
+      data: {
+        isBanned: true,
+        banReason: reason,
+      },
     });
 
     res.status(200).json({
       success: true,
       message: `User ${user.name} has been banned successfully`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+// Ban user
+export const UnbanUser = async (req: AuthenticatedRequest, res: Response) => {
+  const adminId = req.user?.id;
+  const adminRole = req.user?.role;
+  const { userId } = req.params;
+  const { reason } = req.body;
+
+  if (!adminId || adminRole !== "ADMIN") {
+    res.status(401).json({ success: false, message: "Unauthorized access" });
+    return;
+  }
+
+  if (!reason) {
+    res.status(400).json({ success: false, message: "Ban reason is required" });
+    return;
+  }
+
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    // Create a notification for the user
+    await createNotification(
+      userId,
+      `Your account has been unbanned. Reason: ${reason}`
+    );
+
+    // You might want to set a banned flag instead of deleting the user
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        isBanned: false,
+        banReason: reason,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} has been unbanned successfully`,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Internal Server Error" });

@@ -6,6 +6,7 @@ import {
   getUserById,
   banUser,
   getUserStats,
+  UnbanUser,
 } from "../controllers/AdminController";
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 router.get("/users", authMiddleware, getAllUsers);
 router.get("/users/:userId", authMiddleware, getUserById);
 router.delete("/users/:userId/ban", authMiddleware, banUser);
+router.delete("/users/:userId/unban", authMiddleware, UnbanUser);
 router.get("/stats/users/total", authMiddleware, getTotalNoOfUsers);
 router.get("/stats/overview", authMiddleware, getUserStats);
 
