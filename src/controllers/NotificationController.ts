@@ -98,24 +98,11 @@ export const markAllNotificationsAsRead = async (
       return;
     }
 
-    const notification = await db.notification.findMany({
-      where: {
-        userId,
-        isRead: false,
-      },
-    });
-
-    if (!notification) {
-      res
-        .status(404)
-        .json({ success: false, message: "Notification not found" });
-      return;
-    }
-
     // Update all unread notifications for user
     await db.notification.updateMany({
       where: {
         userId,
+        isRead: false,
       },
       data: { isRead: true },
     });

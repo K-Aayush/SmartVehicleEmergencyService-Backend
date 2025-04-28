@@ -74,6 +74,8 @@ export const registerUser = async (req: Request, res: Response) => {
       role,
       profileImage: imageUpload?.secure_url,
       companyName: role === "VENDOR" ? companyName : undefined,
+      isBanned: false,
+      banReason: "",
     };
 
     //store the userdata in database
@@ -122,6 +124,14 @@ export const loginUser = async (req: Request, res: Response) => {
       res
         .status(400)
         .json({ success: false, message: "Invalid email or password" });
+      return;
+    }
+
+    // Check if the user is banned
+    if (user.isBanned) {
+      res
+        .status(403)
+        .json({ success: false, message: "Your account is banned" });
       return;
     }
 
@@ -248,7 +258,7 @@ export const updateProfile = async (
     if (updates.oldPassword && updates.newPassword) {
       const isMatch = await bcrypt.compare(
         updates.oldPassword,
-        existingUser.password 
+        existingUser.password
       );
       if (!isMatch) {
         res.status(400).json({ success: false, message: "Invalid password" });

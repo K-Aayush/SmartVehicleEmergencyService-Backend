@@ -57,7 +57,6 @@ export const requestEmergencyAssistance = async (
     const providers = await db.user.findMany({
       where: {
         role: "SERVICE_PROVIDER",
-        isOnline: true,
         latitude: {
           gte: Number(latitude) - 0.1, // Approximately 11km radius
           lte: Number(latitude) + 0.1,
@@ -74,22 +73,46 @@ export const requestEmergencyAssistance = async (
       },
     });
 
-    // Notify nearby service providers and initiate chat
-    for (const provider of providers) {
-      // Create initial chat message
+    // Create chat messages and notifications for each provider
+    const chatPromises = providers.map(async (provider) => {
+      // Create initial chat message from user to provider
       await db.chat.create({
         data: {
           senderId: userId,
           receiverId: provider.id,
-          message: `Emergency ${assistanceType} assistance needed for my ${emergencyRequest.vehicle.year} ${emergencyRequest.vehicle.brand} ${emergencyRequest.vehicle.model}. Location: ${latitude},${longitude}`,
+          message: `Emergency ${assistanceType} assistance needed for my ${
+            emergencyRequest.vehicle.year
+          } ${emergencyRequest.vehicle.brand} ${
+            emergencyRequest.vehicle.model
+          }. Location: ${latitude},${longitude}. ${
+            description ? `Details: ${description}` : ""
+          }`,
         },
       });
 
+      // Create initial chat message from provider to user
+      await db.chat.create({
+        data: {
+          senderId: provider.id,
+          receiverId: userId,
+          message: `I've received your emergency request for ${assistanceType} assistance. I'll check your location and respond shortly.`,
+        },
+      });
+
+      // Create notification for the provider
       await createNotification(
         provider.id,
         `Emergency assistance needed! ${emergencyRequest.user.name} needs ${assistanceType} assistance for their ${emergencyRequest.vehicle.year} ${emergencyRequest.vehicle.brand} ${emergencyRequest.vehicle.model}.`
       );
-    }
+    });
+
+    await Promise.all(chatPromises);
+
+    // Create notification for the user
+    await createNotification(
+      userId,
+      `Your emergency request has been sent to ${providers.length} nearby service providers. They will contact you shortly.`
+    );
 
     res.status(201).json({
       success: true,
@@ -223,7 +246,11 @@ export const getProviderEmergencyRequests = async (
 
     const requests = await db.emergencyAssistance.findMany({
       where: {
-        OR: [{ status: "INPROGRESS" }, { status: "COMPLETED" }],
+        OR: [
+          { status: "INPROGRESS" },
+          { status: "COMPLETED" },
+          { status: "PENDING" },
+        ],
       },
       include: {
         user: {
@@ -302,6 +329,15 @@ export const acceptEmergencyRequest = async (
       data: { status: "INPROGRESS" },
     });
 
+    // Create a chat message
+    await db.chat.create({
+      data: {
+        senderId: providerId,
+        receiverId: request.user.id,
+        message: `I've accepted your emergency request and I'm on my way to help you.`,
+      },
+    });
+
     // Notify the user
     await createNotification(
       request.user.id,
@@ -311,6 +347,83 @@ export const acceptEmergencyRequest = async (
     res.status(200).json({
       success: true,
       message: "Emergency request accepted",
+      request: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error accepting emergency request:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// complete emergency request
+export const completeEmergencyRequest = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const providerId = req.user?.id;
+    const { requestId } = req.params;
+
+    if (!providerId || !requestId) {
+      res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+      return;
+    }
+
+    const request = await db.emergencyAssistance.findUnique({
+      where: { id: requestId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!request) {
+      res.status(404).json({
+        success: false,
+        message: "Emergency request not found",
+      });
+      return;
+    }
+
+    if (request.status !== "INPROGRESS") {
+      res.status(400).json({
+        success: false,
+        message: "This request has already been completed",
+      });
+      return;
+    }
+
+    // Update request status
+    const updatedRequest = await db.emergencyAssistance.update({
+      where: { id: requestId },
+      data: { status: "COMPLETED" },
+    });
+
+    // Create a chat message
+    await db.chat.create({
+      data: {
+        senderId: providerId,
+        receiverId: request.user.id,
+        message: `I've complete your emergency request. Thank you for choosing me for your support`,
+      },
+    });
+
+    // Notify the user
+    await createNotification(
+      request.user.id,
+      `A service provider has completed your emergency assistance request.`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Emergency request completed",
       request: updatedRequest,
     });
   } catch (error) {
