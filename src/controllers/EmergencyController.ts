@@ -193,6 +193,9 @@ export const getNearbyEmergencyRequests = async (
           gte: lng - searchRadius / (111.32 * Math.cos(lat * (Math.PI / 180))),
           lte: lng + searchRadius / (111.32 * Math.cos(lat * (Math.PI / 180))),
         },
+        vehicle: {
+          userId: providerId,
+        },
       },
       include: {
         user: {
@@ -246,11 +249,12 @@ export const getProviderEmergencyRequests = async (
 
     const requests = await db.emergencyAssistance.findMany({
       where: {
-        OR: [
-          { status: "INPROGRESS" },
-          { status: "COMPLETED" },
-          { status: "PENDING" },
-        ],
+        vehicle: {
+          userId: providerId,
+        },
+        status: {
+          in: ["INPROGRESS", "COMPLETED", "PENDING"],
+        },
       },
       include: {
         user: {

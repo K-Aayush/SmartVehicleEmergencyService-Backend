@@ -7,6 +7,7 @@ import {
   getLowStockProducts,
   getProducts,
   getProductsById,
+  getProductsForVendor,
   updateOrderStatus,
   updateProduct,
   updateProductStock,
@@ -22,6 +23,7 @@ router.post(
 );
 
 router.get("/getProducts", getProducts);
+router.get("/getProductsForVendor", authMiddleware, getProductsForVendor);
 router.get("/getProductById/:id", getProductsById);
 router.put("/updateProductStock", authMiddleware, updateProductStock);
 router.get("/getLowStockProducts", authMiddleware, getLowStockProducts);

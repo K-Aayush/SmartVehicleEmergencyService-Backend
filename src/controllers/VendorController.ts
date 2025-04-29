@@ -127,6 +127,43 @@ export const getProducts = async (req: Request, res: Response) => {
 };
 
 //api to get product
+export const getProductsForVendor = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const vendorId = req.user.id;
+
+    if (!vendorId) {
+      res.status(404).json({ success: false, message: "Unauthorized Access" });
+      return;
+    }
+
+    const products = await db.product.findMany({
+      where: { vendorId },
+      include: {
+        images: true,
+        Vendor: {
+          select: {
+            name: true,
+            companyName: true,
+          },
+        },
+      },
+    });
+
+    if (!products || products.length === 0) {
+      res.status(404).json({ success: false, message: "No Products Found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+//api to get product
 export const getProductsById = async (req: Request, res: Response) => {
   try {
     //optional filter products
